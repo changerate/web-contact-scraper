@@ -1,19 +1,19 @@
 import requests
-from bs4 import BeautifulSoup
-import re  # regex
-import time
-import pandas as pd
-from random import randint  # used for choosing a random header
-import os
+from bs4 import BeautifulSoup # Parsing html
+import re                   # Regular expression - used for finding phone numbers & emails
+import pandas as pd         # Storing data as dataframes
+from random import randint  # Used for choosing a random header from the gernerated list
+import os                   # For saving files: accessing OS info from user.
 from googlesearch import search
-start_time = time.time()
 
 # allows us a list of headers to send.
-# check headers with: http://httpbin.org/headers
+# check your computer headers with: http://httpbin.org/headers
 SCRAPEOPS_API_KEY = '59cfb68f-5843-432f-a4d3-81e93fa9a30e'
 
 
 def get_headers_list():
+    # Use an API to obtain a header list, only use one each time
+    # Scrape Ops
     response = requests.get(
         'http://headers.scrapeops.io/v1/browser-headers?api_key=' +
         SCRAPEOPS_API_KEY)
@@ -112,4 +112,3 @@ if __name__ == "__main__":
     # Use pandas to save the DataFrame to the CSV file
     table.to_csv(csv_path, index=False, header=True)
     print("\nDone!")
-    print("Process finished --- %s seconds ---" % (time.time() - start_time) + "\n\n\n")

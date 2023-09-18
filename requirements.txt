@@ -1,0 +1,7 @@
+requests
+BeautifulSoup
+re
+pandas
+random
+os
+googlesearch
