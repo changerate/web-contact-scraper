@@ -11,35 +11,30 @@ from googlesearch import search
 SCRAPEOPS_API_KEY = '59cfb68f-5843-432f-a4d3-81e93fa9a30e'
 
 
-def get_headers_list():
-    # Use an API to obtain a header list, only use one each time
-    # Scrape Ops
+def get_random_header():
+    # Use a Scrape Ops API to obtain a header list, only use one each time
     response = requests.get(
         'http://headers.scrapeops.io/v1/browser-headers?api_key=' +
         SCRAPEOPS_API_KEY)
     json_response = response.json()
-    return json_response.get('result', [])
-
-
-def get_random_header(header_list):
+    header_list = json_response.get('result', [])
     random_index = randint(0, len(header_list) - 1)
     return header_list[random_index]
 
 
 def get_all_websites():
-    searched = input("\n\nEnter a Google search:\n")
-    search_results = list(search(searched, 10, 10))
-
+    searchTerm = input("\n\nEnter a Google search: ")
+    search_results = list(search(searchTerm, num_results=50))
+    print("\n\n")
+    
     # Extract actual URLs from search results
     web_list = [result for result in search_results if result.startswith("http")]
-
     return web_list
 
 
 def get_email_and_numbers(m, the_header):
     try:
-        # requests (from web_list) website's html
-
+        # requests website's html (from web_list)
         request = requests.get(m, headers=the_header)
         request.raise_for_status()  # Check for any errors in the response
 
@@ -47,55 +42,68 @@ def get_email_and_numbers(m, the_header):
         soup = BeautifulSoup(request.content, 'html.parser')
         emails = []
         phone_numbers = []
+
         email_pattern = re.compile(
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,7}\b')
+            r'\b[A-Za-z0-9._-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,7}\b')
         phone_pattern = re.compile(
             r'\b(?:(?:\+\d{1,2}[-.\s]*)?(?:(?:\(\d{3}\)|[2-9]\d{2})(?:[-.]|\s?-\s?|\s?\.\s?)\d{3}(?:[-.]|\s?-\s?|\s?\.\s?)\d{4}))\b')
-        for word in soup.find_all():
+        
+        # Go through readable html elements
+        for word in soup.find_all(['p', 'a', 'div', 'span'], recursive=True, limit=1000): # Has a limit to the amount of recursive HTML elements to go through
             word_text = word.get_text()
-            email_matches = email_pattern.findall(word_text)
-            phone_matches = phone_pattern.findall(word_text)
-            emails.extend(email_matches)
-            phone_numbers.extend(phone_matches)
 
+            # Check href attributes for mailto: links
+            if word.name == 'a' and word.get('href'):
+                href = word.get('href')
+                if href.startswith('mailto:'):
+                    emails.append(href[7:])  # Remove 'mailto:' prefix
+                elif href.startswith('tel:'):
+                    phone_numbers.append(href[4:])  # Remove 'tel:' prefix
+            if word_text:
+                emails.extend(email_pattern.findall(word_text))
+                phone_numbers.extend(phone_pattern.findall(word_text))
+        
+        # Remove duplicates
+        emails = list(dict.fromkeys(emails))
+        phone_numbers = list(dict.fromkeys(phone_numbers))
+
+        emails_and_nums = []
         if emails:
-            emails = set(emails)
-            emails = list(emails)
-        emails.insert(0, "EMAILS:")
+            emails_and_nums.append("EMAILS:")
+            emails_and_nums.extend(emails)
         if phone_numbers:
-            phone_numbers = set(phone_numbers)
-            phone_numbers = list(phone_numbers)
-        phone_numbers.insert(0, "PHONE NUMBERS:")
-        emails_and_nums = emails + phone_numbers
-        return emails_and_nums
+            emails_and_nums.append("PHONE NUMBERS:")
+            emails_and_nums.extend(phone_numbers)
+
+        if emails_and_nums:
+            return emails_and_nums
+        else:
+            return 0
 
     except requests.exceptions.RequestException as e:
         print(f"Error occurred while processing {m}: {str(e)}")
         return []
 
 
-def table_concat(found_emails, m):
-    # combine different data (from one website) into ONE COLUMN
-    column = found_emails_and_nums
-    column_dataframe = pd.DataFrame({m: column})  # "DataFrame form"
-    return column_dataframe
-
 
 # ------------------------------------------
 # MAIN PROGRAM
 if __name__ == "__main__":
-    header_list = get_headers_list()
-    the_header = get_random_header(header_list)
-    print(the_header)
+    the_header = get_random_header()
+    # print(the_header)
     web_list = get_all_websites()
-    # next two lines set's up the table
+
+    # Next two lines set's up the table
     d = []
     table = pd.DataFrame(d)
-    for m in web_list:  # iterates through each website (m) on the list and performs necessary tasks
+
+    # Iterates through each website (m) on the list (web_list) and performs necessary tasks
+    for m in web_list:  
         found_emails_and_nums = get_email_and_numbers(m, the_header)  # PRIMARY VARIABLE
-        column_dataframe = table_concat(found_emails_and_nums, m)
-        # concatenate current column to previous (side by side)
-        table = pd.concat([table, column_dataframe], axis="columns")
+        if found_emails_and_nums:
+            column_dataframe = pd.DataFrame({m: found_emails_and_nums})
+            # concatenate current column to previous (side by side)
+            table = pd.concat([table, column_dataframe], axis="columns")
 
     print("\n-------final table---------")
     print(table)
@@ -104,11 +112,11 @@ if __name__ == "__main__":
     # Define the filename and folder in the documents directory
     filename = input("Enter a name for your file:\n")
     file_name = filename + ".csv"
-    documents_folder = "Documents"
+    save_to_folder = "Documents"
 
     # Construct the full path to the CSV file
-    csv_path = os.path.join(user_home, documents_folder, file_name)
+    csv_path = os.path.join(user_home, save_to_folder, file_name)
 
     # Use pandas to save the DataFrame to the CSV file
     table.to_csv(csv_path, index=False, header=True)
-    print("\nDone!")
+    print("\nDone!\nSaved to your " + save_to_folder + " folder.\n")
