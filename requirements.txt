@@ -5,5 +5,6 @@ pandas
 random
 os
 googlesearch
+python-dotenv
 
 # pip3 install requests bs4 re pandas random os googlesearch-python
