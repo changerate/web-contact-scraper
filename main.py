@@ -5,10 +5,14 @@ import pandas as pd         # Storing data as dataframes
 from random import randint  # Used for choosing a random header from the gernerated list
 import os                   # For saving files: accessing OS info from user.
 from googlesearch import search
+from dotenv import load_dotenv
+import os
 
-# allows us a list of headers to send.
+
+# The following API allows us a list of headers to send.
 # check your computer headers with: http://httpbin.org/headers
-SCRAPEOPS_API_KEY = '59cfb68f-5843-432f-a4d3-81e93fa9a30e'
+load_dotenv()
+SCRAPEOPS_API_KEY = os.getenv('SCRAPEOPS_API_KEY')
 
 
 def get_random_header():
@@ -24,7 +28,7 @@ def get_random_header():
 
 def get_all_websites():
     searchTerm = input("\n\nEnter a Google search: ")
-    search_results = list(search(searchTerm, num_results=50))
+    search_results = list(search(searchTerm, num_results=20))
     print("\n\n")
     
     # Extract actual URLs from search results
